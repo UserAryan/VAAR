@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for both influencers and brands
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  type          UserType  // INFLUENCER or BRAND
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  profile       Profile?
+  campaigns     Campaign[] @relation("CampaignParticipants")
+  content       Content[]
+  analytics     Analytics[]
+  notifications Notification[]
+  transactions  Transaction[]
+  contracts     Contract[]
+  wallet        Wallet?
+}
+
+enum UserType {
+  INFLUENCER
+  BRAND
+}
+
+// Profile information for users
+model Profile {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  bio           String?
+  avatar        String?
+  socialLinks   Json?     // Store social media links as JSON
+  metrics       Json?     // Store engagement metrics as JSON
+  niches        String[]  // Array of niches/categories
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  vectorId      String?   // Pinecone vector ID for semantic search
+}
+
+// Campaign model
+model Campaign {
+  id            String    @id @default(cuid())
+  name          String
+  description   String
+  brandId       String
+  brand         User      @relation("CampaignParticipants", fields: [brandId], references: [id])
+  status        CampaignStatus
+  startDate     DateTime
+  endDate       DateTime
+  budget        Float
+  requirements  Json      // Store campaign requirements as JSON
+  content       Content[]
+  analytics     Analytics[]
+  contracts     Contract[]
+  transactions  Transaction[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// Content model
+model Content {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  type          ContentType
+  mediaUrl      String?   // S3/Supabase Storage URL
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id])
+  status        ContentStatus
+  analytics     Analytics[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum ContentType {
+  POST
+  STORY
+  REEL
+  VIDEO
+  ARTICLE
+}
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Analytics model
+model Analytics {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id])
+  contentId     String?
+  content       Content?  @relation(fields: [contentId], references: [id])
+  metrics       Json      // Store analytics metrics as JSON
+  date          DateTime
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Notification model
+model Notification {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  type          NotificationType
+  message       String
+  read          Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum NotificationType {
+  CAMPAIGN_INVITE
+  CONTENT_APPROVAL
+  PAYMENT_RECEIVED
+  SYSTEM_UPDATE
+}
+
+// Transaction model
+model Transaction {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id])
+  amount        Float
+  type          TransactionType
+  status        TransactionStatus
+  paymentMethod String?
+  metadata      Json?     // Additional transaction details
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  WITHDRAWAL
+  DEPOSIT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Contract model
+model Contract {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  campaignId    String
+  campaign      Campaign  @relation(fields: [campaignId], references: [id])
+  status        ContractStatus
+  documentUrl   String    // S3/Supabase Storage URL for contract PDF
+  terms         Json      // Contract terms and conditions
+  signedAt      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING
+  SIGNED
+  EXPIRED
+  CANCELLED
+}
+
+// Wallet model
+model Wallet {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id])
+  balance       Float     @default(0)
+  currency      String    @default("USD")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
