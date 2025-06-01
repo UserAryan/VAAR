@@ -1,15 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_ANON_KEY || ''
-)
+import { supabase, STORAGE_BUCKETS } from './supabase';
 
 export const storage = {
   // Upload media file
   uploadMedia: async (file: File, path: string) => {
     const { data, error } = await supabase.storage
-      .from('media')
+      .from(STORAGE_BUCKETS.CONTENT_MEDIA)
       .upload(path, file)
     
     if (error) throw error
@@ -19,7 +14,7 @@ export const storage = {
   // Upload contract PDF
   uploadContract: async (file: File, path: string) => {
     const { data, error } = await supabase.storage
-      .from('contracts')
+      .from(STORAGE_BUCKETS.CAMPAIGN_ASSETS)
       .upload(path, file)
     
     if (error) throw error

@@ -1,4 +1,4 @@
-import { PrismaClient, UserType, CampaignStatus, ContentType, ContentStatus } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient()
 
@@ -8,7 +8,7 @@ async function main() {
     data: {
       email: 'brand@example.com',
       name: 'Example Brand',
-      type: UserType.BRAND,
+      type: 'BRAND',
       profile: {
         create: {
           bio: 'A leading brand in the industry',
@@ -31,7 +31,7 @@ async function main() {
     data: {
       email: 'influencer@example.com',
       name: 'Example Influencer',
-      type: UserType.INFLUENCER,
+      type: 'INFLUENCER',
       profile: {
         create: {
           bio: 'Lifestyle and fashion content creator',
@@ -55,7 +55,7 @@ async function main() {
       name: 'Summer Collection Launch',
       description: 'Promote our new summer collection',
       brandId: brand.id,
-      status: CampaignStatus.ACTIVE,
+      status: 'ACTIVE',
       startDate: new Date('2024-06-01'),
       endDate: new Date('2024-08-31'),
       budget: 5000,
@@ -72,11 +72,11 @@ async function main() {
     data: {
       title: 'Summer Collection Lookbook',
       description: 'Showcasing the new summer collection',
-      type: ContentType.VIDEO,
+      type: 'VIDEO',
       mediaUrl: 'https://example.com/video1',
       userId: influencer.id,
       campaignId: campaign.id,
-      status: ContentStatus.PUBLISHED
+      status: 'PUBLISHED'
     }
   })
 

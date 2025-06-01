@@ -8,12 +8,21 @@ import {
 } from 'lucide-react';
 import { SupervisorAgent } from '../agents/SupervisorAgent';
 
+interface WorkflowStep {
+  step: string;
+  result: {
+    message?: string;
+    result?: any;
+  };
+}
+
 export default function InfluencerFlowMVP() {
   const [supervisor] = useState(() => new SupervisorAgent());
   const [systemStatus, setSystemStatus] = useState<any>(null);
   const [campaignResults, setCampaignResults] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [error, setError] = useState<string | null>(null);
 
   // Campaign form state
   const [campaignForm, setCampaignForm] = useState({
@@ -30,8 +39,14 @@ export default function InfluencerFlowMVP() {
   // Update system status periodically
   useEffect(() => {
     const updateStatus = () => {
-      const status = supervisor.getSystemStatus();
-      setSystemStatus(status);
+      try {
+        const status = supervisor.getSystemStatus();
+        setSystemStatus(status);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update system status');
+        console.error('Error updating status:', err);
+      }
     };
 
     updateStatus();
@@ -126,7 +141,7 @@ export default function InfluencerFlowMVP() {
     );
   };
 
-  const renderWorkflowStep = (step: any, index: number) => {
+  const renderWorkflowStep = (step: WorkflowStep, index: number) => {
     const stepIcons: Record<string, any> = {
       discovery: Search,
       outreach: Mail,
