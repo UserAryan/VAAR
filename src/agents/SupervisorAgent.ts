@@ -220,7 +220,7 @@ export class SupervisorAgent {
         status: agent.status,
         completedTasks: agent.completedTasks,
         performance: agent.performance,
-        currentTask: agent.currentTask?.description || null,
+        currentTask: agent.currentTask?.type || null,
         icon: agent.icon
       })),
       campaigns: {
