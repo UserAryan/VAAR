@@ -27,46 +27,64 @@ interface OutreachMessage {
 export class OutreachAgent extends Agent {
   constructor() {
     super(
+      'outreach_agent',
       'AI Outreach Agent',
       'outreach_automation',
-      ['SEND_OUTREACH', 'NEGOTIATE_DEALS', 'MULTILINGUAL_COMM'],
       Mail
     );
   }
 
-  async executeTask(task: Task) {
-    const { creators, campaign } = task.payload as { creators: Creator[], campaign: Campaign };
-    
-    const outreachResults = [];
-    
-    for (const creator of creators) {
-      // Generate personalized outreach message
-      const message = await this.generateOutreachMessage(creator, campaign);
-      
-      // Simulate sending email
-      await this.sendEmail(creator, message);
-      
-      outreachResults.push({
-        creatorId: creator.id,
-        creatorName: creator.name,
-        status: Math.random() > 0.3 ? 'sent' : 'failed',
-        message: message.subject,
-        sentAt: new Date().toISOString()
-      });
-    }
+  canHandle(taskType: string): boolean {
+    return ['SEND_OUTREACH', 'NEGOTIATE_DEALS', 'MULTILINGUAL_COMM'].includes(taskType);
+  }
 
-    const sentCount = outreachResults.filter(r => r.status === 'sent').length;
-    
-    return {
-      outreachResults,
-      summary: {
-        total: creators.length,
-        sent: sentCount,
-        failed: creators.length - sentCount,
-        expectedResponses: Math.floor(sentCount * 0.15) // 15% response rate
-      },
-      message: `Outreach sent to ${sentCount}/${creators.length} creators`
-    };
+  async processTask(task: Task): Promise<any> {
+    this.status = 'working';
+    this.currentTask = task;
+
+    try {
+      const { creators, campaign } = task.payload as { creators: Creator[], campaign: Campaign };
+      
+      const outreachResults = [];
+      
+      for (const creator of creators) {
+        // Generate personalized outreach message
+        const message = await this.generateOutreachMessage(creator, campaign);
+        
+        // Simulate sending email
+        await this.sendEmail(creator, message);
+        
+        outreachResults.push({
+          creatorId: creator.id,
+          creatorName: creator.name,
+          status: Math.random() > 0.3 ? 'sent' : 'failed',
+          message: message.subject,
+          sentAt: new Date().toISOString()
+        });
+      }
+
+      const sentCount = outreachResults.filter(r => r.status === 'sent').length;
+      
+      this.status = 'idle';
+      this.currentTask = null;
+      this.completedTasks++;
+      this.performance = Math.floor(Math.random() * 20 + 80);
+
+      return {
+        outreachResults,
+        summary: {
+          total: creators.length,
+          sent: sentCount,
+          failed: creators.length - sentCount,
+          expectedResponses: Math.floor(sentCount * 0.15) // 15% response rate
+        },
+        message: `Outreach sent to ${sentCount}/${creators.length} creators`
+      };
+    } catch (error) {
+      this.status = 'error';
+      this.currentTask = null;
+      throw error;
+    }
   }
 
   private async generateOutreachMessage(creator: Creator, campaign: Campaign): Promise<OutreachMessage> {
