@@ -1,66 +1,91 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const data = await req.json();
+    const { 
+      campaignName,
+      objective,
+      budget,
+      startDate,
+      endDate,
+      platforms,
+      targetAudience,
+      deliverables,
+      notes
+    } = data;
+
+    // Validate required fields
+    if (!campaignName || !objective || !budget) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
     }
 
-    const data = await req.json();
-    const { name, description, budget, requirements, startDate, endDate } = data;
-
-    // Create campaign in database
-    const campaign = await db.campaign.create({
-      data: {
-        name,
-        description,
-        budget: parseFloat(budget),
-        requirements,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        status: 'DRAFT',
-        brandId: session.user.id
-      }
-    });
+    // Generate a temporary campaign ID
+    const campaignId = `temp_${Date.now()}`;
 
     // Send webhook to n8n
-    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
+    const n8nWebhookUrl = 'https://vaar.app.n8n.cloud/webhook/campaign-create';
     if (n8nWebhookUrl) {
       try {
+        console.log('Sending webhook to n8n:', n8nWebhookUrl);
+        const webhookData = {
+          campaignName,
+          objective,
+          budget: parseFloat(budget),
+          startDate,
+          endDate,
+          platforms,
+          targetAudience,
+          deliverables,
+          notes,
+          campaignId,
+          timestamp: new Date().toISOString()
+        };
+        console.log('Webhook data:', webhookData);
+
         const response = await fetch(n8nWebhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            campaignId: campaign.id,
-            name: campaign.name,
-            description: campaign.description,
-            budget: campaign.budget,
-            requirements: campaign.requirements,
-            startDate: campaign.startDate,
-            endDate: campaign.endDate,
-            brandId: session.user.id,
-            timestamp: new Date().toISOString(),
-          }),
+          body: JSON.stringify(webhookData),
         });
 
         if (!response.ok) {
-          console.error('Failed to send webhook to n8n:', await response.text());
+          const errorText = await response.text();
+          console.error('Failed to send webhook to n8n:', errorText);
+          throw new Error(`Failed to send webhook to n8n: ${errorText}`);
         }
+
+        const responseData = await response.text();
+        console.log('Webhook response:', responseData);
+
+        return NextResponse.json({
+          campaignId,
+          status: 'success',
+          message: 'Campaign webhook sent successfully',
+          data: webhookData
+        });
       } catch (error) {
         console.error('Error sending webhook to n8n:', error);
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : 'Failed to send webhook to n8n' },
+          { status: 500 }
+        );
       }
+    } else {
+      return NextResponse.json(
+        { error: 'N8N webhook URL not configured' },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json(campaign);
   } catch (error) {
     console.error('Error creating campaign:', error);
     return NextResponse.json(
-      { error: 'Failed to create campaign' },
+      { error: error instanceof Error ? error.message : 'Failed to create campaign' },
       { status: 500 }
     );
   }

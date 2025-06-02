@@ -7,6 +7,11 @@ import {
   Youtube, Instagram, MessageSquare, DollarSign, Eye
 } from 'lucide-react';
 import { SupervisorAgent } from '../agents/SupervisorAgent';
+import { CreateCampaignData, Campaign } from '@/types/campaign';
+import CampaignAnalytics from '@/components/CampaignAnalytics';
+import CreateCampaignForm from '../components/CreateCampaignForm';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface WorkflowStep {
   step: string;
@@ -16,9 +21,119 @@ interface WorkflowStep {
   };
 }
 
-export default function InfluencerFlowMVP() {
+interface SystemStatus {
+  campaigns: { active: number; total: number };
+  agents: { online: number; total: number };
+}
+
+// Mock campaign data
+const mockCampaigns: Campaign[] = [
+  {
+    id: '1',
+    campaignName: 'Summer Collection Launch',
+    objective: 'Brand Awareness',
+    budget: 5000,
+    startDate: '2024-06-01',
+    endDate: '2024-08-31',
+    platforms: ['Instagram', 'YouTube'],
+    targetAudience: 'Fashion enthusiasts, 18-35',
+    deliverables: '10 posts, 5 stories, 2 reels',
+    status: 'completed',
+    createdAt: '2024-03-15T10:00:00Z',
+    analytics: {
+      engagement: {
+        likes: 15000,
+        comments: 2500,
+        shares: 3000,
+        reach: 50000,
+        impressions: 75000,
+        engagementRate: 4.2,
+        growthRate: 12.5,
+        conversionRate: 3.8,
+        roi: 2.5
+      },
+      demographics: {
+        ageGroups: {
+          '18-24': 35,
+          '25-34': 45,
+          '35-44': 15,
+          '45+': 5
+        },
+        gender: {
+          male: 40,
+          female: 60
+        },
+        locations: {
+          'North America': 45,
+          'Europe': 30,
+          'Asia': 15,
+          'Other': 10
+        }
+      },
+      timeline: Array.from({ length: 30 }, (_, i) => ({
+        date: new Date(2024, 5, i + 1).toISOString().split('T')[0],
+        engagement: Math.floor(Math.random() * 1000) + 500,
+        reach: Math.floor(Math.random() * 5000) + 2000,
+        conversions: Math.floor(Math.random() * 100) + 50
+      }))
+    }
+  },
+  {
+    id: '2',
+    campaignName: 'Holiday Special',
+    objective: 'Sales',
+    budget: 8000,
+    startDate: '2024-11-15',
+    endDate: '2024-12-31',
+    platforms: ['Instagram', 'YouTube'],
+    targetAudience: 'Shoppers, 25-45',
+    deliverables: '15 posts, 8 stories, 3 videos',
+    status: 'completed',
+    createdAt: '2024-03-14T15:30:00Z',
+    analytics: {
+      engagement: {
+        likes: 20000,
+        comments: 3500,
+        shares: 4500,
+        reach: 75000,
+        impressions: 100000,
+        engagementRate: 5.1,
+        growthRate: 15.2,
+        conversionRate: 4.5,
+        roi: 3.2
+      },
+      demographics: {
+        ageGroups: {
+          '18-24': 25,
+          '25-34': 50,
+          '35-44': 20,
+          '45+': 5
+        },
+        gender: {
+          male: 45,
+          female: 55
+        },
+        locations: {
+          'North America': 50,
+          'Europe': 25,
+          'Asia': 20,
+          'Other': 5
+        }
+      },
+      timeline: Array.from({ length: 30 }, (_, i) => ({
+        date: new Date(2024, 10, i + 15).toISOString().split('T')[0],
+        engagement: Math.floor(Math.random() * 1200) + 600,
+        reach: Math.floor(Math.random() * 6000) + 3000,
+        conversions: Math.floor(Math.random() * 150) + 75
+      }))
+    }
+  }
+];
+
+export default function Home() {
+  const { data: session } = useSession();
   const [supervisor] = useState(() => new SupervisorAgent());
-  const [systemStatus, setSystemStatus] = useState<any>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [campaignResults, setCampaignResults] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -26,14 +141,15 @@ export default function InfluencerFlowMVP() {
 
   // Campaign form state
   const [campaignForm, setCampaignForm] = useState({
-    title: '',
-    brand: '',
+    campaignName: '',
+    objective: '',
     budget: '',
-    niche: '',
-    platform: '',
-    minFollowers: '',
+    startDate: '',
+    endDate: '',
+    platforms: '',
+    targetAudience: '',
     deliverables: '',
-    timeline: ''
+    notes: ''
   });
 
   // Update system status periodically
@@ -55,40 +171,42 @@ export default function InfluencerFlowMVP() {
   }, [supervisor]);
 
   const handleCreateCampaign = async () => {
-    if (!campaignForm.title || !campaignForm.brand || !campaignForm.budget) {
-      alert('Please fill in required fields: Title, Brand, and Budget');
+    // Get form data from the CreateCampaignForm component
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const campaignName = formData.get('campaignName') as string;
+    const objective = formData.get('objective') as string;
+    const budget = formData.get('budget') as string;
+
+    if (!campaignName || !objective || !budget) {
+      alert('Please fill in required fields: Campaign Name, Objective, and Budget');
       return;
     }
 
     setIsRunning(true);
     try {
-      const campaignData = {
-        title: campaignForm.title,
-        brand: campaignForm.brand,
-        budget: parseInt(campaignForm.budget),
-        targetCriteria: {
-          niche: campaignForm.niche,
-          platform: campaignForm.platform,
-          minFollowers: parseInt(campaignForm.minFollowers) || 1000
-        },
-        deliverables: campaignForm.deliverables || 'Social media posts',
-        timeline: campaignForm.timeline || '2 weeks'
+      const campaignData: CreateCampaignData = {
+        campaignName,
+        objective,
+        budget: parseInt(budget),
+        startDate: formData.get('startDate') as string,
+        endDate: formData.get('endDate') as string,
+        platforms: (formData.get('platforms') as string).split(',').map(p => p.trim()),
+        targetAudience: formData.get('targetAudience') as string,
+        deliverables: formData.get('deliverables') as string,
+        notes: formData.get('notes') as string
       };
 
       const result = await supervisor.createCampaign(campaignData);
       setCampaignResults(prev => [result, ...prev]);
       
       // Reset form
-      setCampaignForm({
-        title: '',
-        brand: '',
-        budget: '',
-        niche: '',
-        platform: '',
-        minFollowers: '',
-        deliverables: '',
-        timeline: ''
-      });
+      form.reset();
+
+      // Show success alert with login details
+      alert("Campaign created! Please login to gmail using following details to simulate the test workflow:\n\nGmail id: vaarai25@gmail.com\nPass: Vaar_Ai2025");
     } catch (error) {
       console.error('Campaign creation failed:', error);
       alert('Campaign creation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -191,11 +309,10 @@ export default function InfluencerFlowMVP() {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-blue-600 rounded-lg">
-                <Bot className="w-6 h-6 text-white" />
+                <Bot className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">InfluencerFlow AI</h1>
-                <p className="text-sm text-gray-500">Multi-Agent Influencer Marketing Platform</p>
+                <h1 className="text-3xl font-bold text-gray-900">InfluencerFlow AI</h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -204,290 +321,161 @@ export default function InfluencerFlowMVP() {
                   <span className="font-medium">{systemStatus.campaigns.active}</span> Active Campaigns
                 </div>
               )}
+              {!session && (
+                <Link
+                  href="/login"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Login / Register
+                </Link>
+              )}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            {[
-              { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-              { id: 'campaign', name: 'Create Campaign', icon: Send },
-              { id: 'results', name: 'Campaign Results', icon: Eye }
-            ].map((tab) => {
-              const TabIcon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
-                >
-                  <TabIcon className="w-4 h-4" />
-                  <span>{tab.name}</span>
-                </button>
-              );
-            })}
-          </nav>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'dashboard' && (
-          <div className="space-y-8">
-            {/* System Overview */}
-            {systemStatus && (
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`${
+                activeTab === 'dashboard'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab('create')}
+              className={`${
+                activeTab === 'create'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Create Campaign
+            </button>
+            <button
+              onClick={() => setActiveTab('results')}
+              className={`${
+                activeTab === 'results'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Campaign Results
+            </button>
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeTab === 'dashboard' ? (
+            <div className="space-y-6">
+              {/* Overview Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <Bot className="w-6 h-6 text-blue-600" />
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <BarChart3 className="w-6 h-6 text-blue-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Active Agents</p>
-                      <p className="text-2xl font-semibold text-gray-900">{systemStatus.agents.length}</p>
+                      <h3 className="text-lg font-medium text-gray-900">Total Campaigns</h3>
+                      <p className="text-2xl font-semibold text-gray-900">{mockCampaigns.length}</p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center">
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    <div className="p-3 bg-green-100 rounded-lg">
+                      <DollarSign className="w-6 h-6 text-green-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Completed Tasks</p>
-                      <p className="text-2xl font-semibold text-gray-900">{systemStatus.tasks.completed}</p>
+                      <h3 className="text-lg font-medium text-gray-900">Total Budget</h3>
+                      <p className="text-2xl font-semibold text-gray-900">
+                        ₹{mockCampaigns.reduce((sum, c) => sum + c.budget, 0).toLocaleString('en-IN')}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-center">
-                    <div className="p-2 bg-yellow-50 rounded-lg">
-                      <Clock className="w-6 h-6 text-yellow-600" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Queue</p>
-                      <p className="text-2xl font-semibold text-gray-900">{systemStatus.tasks.queue}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-50 rounded-lg">
+                    <div className="p-3 bg-purple-100 rounded-lg">
                       <Users className="w-6 h-6 text-purple-600" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Campaigns</p>
-                      <p className="text-2xl font-semibold text-gray-900">{systemStatus.campaigns.total}</p>
+                      <h3 className="text-lg font-medium text-gray-900">Total Reach</h3>
+                      <p className="text-2xl font-semibold text-gray-900">
+                        {mockCampaigns.reduce((sum, c) => sum + (c.analytics?.engagement.reach || 0), 0).toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-yellow-100 rounded-lg">
+                      <Eye className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-lg font-medium text-gray-900">Total Impressions</h3>
+                      <p className="text-2xl font-semibold text-gray-900">
+                        {mockCampaigns.reduce((sum, c) => sum + (c.analytics?.engagement.impressions || 0), 0).toLocaleString('en-IN')}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* AI Agents */}
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">AI Agent Status</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {systemStatus?.agents.map(renderAgentCard)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'campaign' && (
-          <div className="max-w-2xl">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Create New Campaign</h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Campaign Title *
-                    </label>
-                    <input
-                      type="text"
-                      value={campaignForm.title}
-                      onChange={(e) => setCampaignForm({...campaignForm, title: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Summer Product Launch"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Brand Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={campaignForm.brand}
-                      onChange={(e) => setCampaignForm({...campaignForm, brand: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Your Brand"
-                    />
-                  </div>
+              {/* Recent Campaigns */}
+              <div className="bg-white rounded-lg shadow">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">Recent Campaigns</h3>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Budget (USD) *
-                    </label>
-                    <input
-                      type="number"
-                      value={campaignForm.budget}
-                      onChange={(e) => setCampaignForm({...campaignForm, budget: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="5000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Target Niche
-                    </label>
-                    <select
-                      value={campaignForm.niche}
-                      onChange={(e) => setCampaignForm({...campaignForm, niche: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Niche</option>
-                      <option value="Tech">Tech</option>
-                      <option value="Fashion">Fashion</option>
-                      <option value="Food">Food</option>
-                      <option value="Travel">Travel</option>
-                      <option value="Fitness">Fitness</option>
-                      <option value="Gaming">Gaming</option>
-                      <option value="Beauty">Beauty</option>
-                      <option value="Lifestyle">Lifestyle</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Platform
-                    </label>
-                    <select
-                      value={campaignForm.platform}
-                      onChange={(e) => setCampaignForm({...campaignForm, platform: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Any Platform</option>
-                      <option value="youtube">YouTube</option>
-                      <option value="instagram">Instagram</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Min Followers
-                    </label>
-                    <input
-                      type="number"
-                      value={campaignForm.minFollowers}
-                      onChange={(e) => setCampaignForm({...campaignForm, minFollowers: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="10000"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Deliverables
-                  </label>
-                  <textarea
-                    value={campaignForm.deliverables}
-                    onChange={(e) => setCampaignForm({...campaignForm, deliverables: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="1 Instagram post, 3 Instagram stories, 1 YouTube video"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Timeline
-                  </label>
-                  <input
-                    type="text"
-                    value={campaignForm.timeline}
-                    onChange={(e) => setCampaignForm({...campaignForm, timeline: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="2 weeks"
-                  />
-                </div>
-
-                <button
-                  onClick={handleCreateCampaign}
-                  disabled={isRunning}
-                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isRunning ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Creating Campaign...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Launch Campaign</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'results' && (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Campaign Results</h2>
-            {campaignResults.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-                <Eye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No campaigns created yet. Create your first campaign to see results here.</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {campaignResults.map((result, index) => (
-                  <div key={index} className="bg-white rounded-lg border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Campaign: {result.campaignId}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        result.status === 'success' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {result.status}
-                      </span>
-                    </div>
-                    
-                    {result.workflow && (
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-4">Workflow Execution</h4>
-                        <div className="space-y-2">
-                          {result.workflow.map((step: WorkflowStep, stepIndex: number) => 
-                            renderWorkflowStep(step, stepIndex)
-                          )}
+                <div className="divide-y divide-gray-200">
+                  {mockCampaigns.map(campaign => (
+                    <div key={campaign.id} className="px-6 py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">{campaign.campaignName}</h4>
+                          <p className="text-sm text-gray-500">{campaign.objective}</p>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-sm text-gray-500">
+                            Budget: ₹{campaign.budget.toLocaleString('en-IN')}
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            campaign.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : campaign.status === 'active'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {campaign.status}
+                          </span>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : activeTab === 'create' ? (
+            <div className="bg-white shadow rounded-lg p-6">
+              <CreateCampaignForm onSubmit={handleCreateCampaign} isLoading={isRunning} />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {mockCampaigns.map(campaign => (
+                <CampaignAnalytics key={campaign.id} campaign={campaign} />
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 } 
