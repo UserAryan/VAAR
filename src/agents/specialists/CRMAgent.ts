@@ -18,28 +18,52 @@ interface CampaignSyncData {
 export class CRMAgent extends Agent {
   constructor() {
     super(
+      'crm_agent',
       'CRM Data Agent',
       'data_management',
-      ['UPDATE_CRM', 'MANAGE_RELATIONSHIPS', 'DATA_SYNC'],
       Database
     );
   }
 
-  async executeTask(task: Task) {
-    const { action, data } = task.payload as { 
-      action: 'UPDATE_CREATOR_PROFILE' | 'LOG_INTERACTION' | 'SYNC_CAMPAIGN_DATA',
-      data: CreatorProfileUpdate | InteractionData | CampaignSyncData
-    };
-    
-    switch (action) {
-      case 'UPDATE_CREATOR_PROFILE':
-        return await this.updateCreatorProfile(data as CreatorProfileUpdate);
-      case 'LOG_INTERACTION':
-        return await this.logInteraction(data as InteractionData);
-      case 'SYNC_CAMPAIGN_DATA':
-        return await this.syncCampaignData(data as CampaignSyncData);
-      default:
-        return { message: 'Unknown CRM action' };
+  canHandle(taskType: string): boolean {
+    return ['UPDATE_CRM', 'MANAGE_RELATIONSHIPS', 'DATA_SYNC'].includes(taskType);
+  }
+
+  async processTask(task: Task): Promise<any> {
+    this.status = 'working';
+    this.currentTask = task;
+
+    try {
+      const { action, data } = task.payload as { 
+        action: 'UPDATE_CREATOR_PROFILE' | 'LOG_INTERACTION' | 'SYNC_CAMPAIGN_DATA',
+        data: CreatorProfileUpdate | InteractionData | CampaignSyncData
+      };
+      
+      let result;
+      switch (action) {
+        case 'UPDATE_CREATOR_PROFILE':
+          result = await this.updateCreatorProfile(data as CreatorProfileUpdate);
+          break;
+        case 'LOG_INTERACTION':
+          result = await this.logInteraction(data as InteractionData);
+          break;
+        case 'SYNC_CAMPAIGN_DATA':
+          result = await this.syncCampaignData(data as CampaignSyncData);
+          break;
+        default:
+          result = { message: 'Unknown CRM action' };
+      }
+
+      this.status = 'idle';
+      this.currentTask = null;
+      this.completedTasks++;
+      this.performance = Math.floor(Math.random() * 20 + 80);
+
+      return result;
+    } catch (error) {
+      this.status = 'error';
+      this.currentTask = null;
+      throw error;
     }
   }
 
