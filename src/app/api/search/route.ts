@@ -46,7 +46,7 @@ async function POST(req: Request) {
           }
 
           const user = await db.user.findUnique({
-            where: { id: result.metadata.userId },
+            where: { id: String(result.metadata.userId) },
             include: {
               profile: true
             }
