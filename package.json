@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed": "node prisma/seed.cjs",
     "seed:pinecone": "ts-node --project tsconfig.scripts.json scripts/seed-pinecone.ts"
   },
   "dependencies": {
@@ -38,6 +38,6 @@
     "typescript": "^5.3.3"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "node prisma/seed.cjs"
   }
 }
