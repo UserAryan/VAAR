@@ -36,33 +36,51 @@ interface SignatureStatus {
 export class ContractAgent extends Agent {
   constructor() {
     super(
+      'contract_agent',
       'Contract Automation Agent',
-      'contract_management', 
-      ['GENERATE_CONTRACT', 'E_SIGNATURE', 'TRACK_STATUS'],
+      'contract_management',
       FileText
     );
   }
 
-  async executeTask(task: Task) {
-    const { dealDetails } = task.payload as { dealDetails: DealDetails };
-    
-    // Generate contract
-    const contract = await this.generateContract(dealDetails);
-    
-    // Simulate e-signature process
-    const signatureStatus = await this.initiateESignature(contract);
-    
-    return {
-      contractId: `contract_${Date.now()}`,
-      contract,
-      signatureStatus,
-      timeline: {
-        generated: new Date().toISOString(),
-        sentForSignature: new Date().toISOString(),
-        expectedCompletion: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
-      },
-      message: 'Contract generated and sent for e-signature'
-    };
+  canHandle(taskType: string): boolean {
+    return ['GENERATE_CONTRACT', 'E_SIGNATURE', 'TRACK_STATUS'].includes(taskType);
+  }
+
+  async processTask(task: Task): Promise<any> {
+    this.status = 'working';
+    this.currentTask = task;
+
+    try {
+      const { dealDetails } = task.payload as { dealDetails: DealDetails };
+      
+      // Generate contract
+      const contract = await this.generateContract(dealDetails);
+      
+      // Simulate e-signature process
+      const signatureStatus = await this.initiateESignature(contract);
+      
+      this.status = 'idle';
+      this.currentTask = null;
+      this.completedTasks++;
+      this.performance = Math.floor(Math.random() * 20 + 80);
+
+      return {
+        contractId: `contract_${Date.now()}`,
+        contract,
+        signatureStatus,
+        timeline: {
+          generated: new Date().toISOString(),
+          sentForSignature: new Date().toISOString(),
+          expectedCompletion: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+        },
+        message: 'Contract generated and sent for e-signature'
+      };
+    } catch (error) {
+      this.status = 'error';
+      this.currentTask = null;
+      throw error;
+    }
   }
 
   private async generateContract(dealDetails: DealDetails): Promise<Contract> {
