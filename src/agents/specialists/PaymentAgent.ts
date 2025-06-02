@@ -1,79 +1,94 @@
 import { CreditCard } from 'lucide-react';
 import { Agent, Task } from '../base/Agent';
 
-interface PaymentDetails {
-  amount: number;
-  milestones: {
-    description: string;
-    amount: number;
-    status: 'completed' | 'pending';
-  }[];
-}
-
-interface Invoice {
+interface Payment {
   id: string;
   amount: number;
-  dueDate: string;
-  status: string;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed';
+  recipient: string;
+  platform: string;
+  campaignId: string;
+  timestamp: string;
 }
 
-interface PaymentResult {
-  id: string;
-  status: 'succeeded' | 'failed';
+interface PaymentRequest {
+  campaignId: string;
+  creatorId: string;
   amount: number;
-  processedAt: string;
+  currency: string;
+  platform: string;
 }
 
 export class PaymentAgent extends Agent {
   constructor() {
     super(
+      'payment_agent',
       'Smart Payment Agent',
-      'payment_processing',
-      ['PROCESS_PAYMENT', 'GENERATE_INVOICE', 'TRACK_MILESTONES'],
+      'payment_automation',
       CreditCard
     );
   }
 
-  async executeTask(task: Task) {
-    const { paymentDetails } = task.payload as { paymentDetails: PaymentDetails };
-    
-    // Generate invoice
-    const invoice = await this.generateInvoice(paymentDetails);
-    
-    // Process payment
-    const paymentResult = await this.processPayment(paymentDetails);
+  canHandle(taskType: string): boolean {
+    return ['PROCESS_PAYMENT', 'VERIFY_PAYMENT', 'REFUND_PAYMENT'].includes(taskType);
+  }
+
+  async processTask(task: Task): Promise<any> {
+    this.status = 'working';
+    this.currentTask = task;
+
+    try {
+      const { paymentRequest } = task.payload as { paymentRequest: PaymentRequest };
+      
+      // Simulate payment processing
+      const payment = await this.processPayment(paymentRequest);
+      
+      // Simulate payment verification
+      const verification = await this.verifyPayment(payment);
+      
+      this.status = 'idle';
+      this.currentTask = null;
+      this.completedTasks++;
+      this.performance = Math.floor(Math.random() * 20 + 80);
+
+      return {
+        payment,
+        verification,
+        message: `Payment ${payment.status} for ${payment.amount} ${payment.currency}`
+      };
+    } catch (error) {
+      this.status = 'error';
+      this.currentTask = null;
+      throw error;
+    }
+  }
+
+  private async processPayment(request: PaymentRequest): Promise<Payment> {
+    // Simulate payment processing
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     return {
-      invoiceId: invoice.id,
-      paymentId: paymentResult.id,
-      amount: paymentDetails.amount,
-      status: paymentResult.status,
-      milestones: paymentDetails.milestones,
-      nextPayment: paymentDetails.milestones?.find(m => m.status === 'pending'),
-      message: `Payment of $${paymentDetails.amount} processed successfully`
+      id: `pay_${Math.random().toString(36).substr(2, 9)}`,
+      amount: request.amount,
+      currency: request.currency,
+      status: Math.random() > 0.1 ? 'completed' : 'failed',
+      recipient: request.creatorId,
+      platform: request.platform,
+      campaignId: request.campaignId,
+      timestamp: new Date().toISOString()
     };
   }
 
-  private async generateInvoice(paymentDetails: PaymentDetails): Promise<Invoice> {
+  private async verifyPayment(payment: Payment): Promise<{ verified: boolean; message: string }> {
+    // Simulate payment verification
     await new Promise(resolve => setTimeout(resolve, 300));
     
     return {
-      id: `inv_${Date.now()}`,
-      amount: paymentDetails.amount,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'generated'
-    };
-  }
-
-  private async processPayment(paymentDetails: PaymentDetails): Promise<PaymentResult> {
-    // Simulate Stripe API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    return {
-      id: `pay_${Date.now()}`,
-      status: Math.random() > 0.05 ? 'succeeded' : 'failed',
-      amount: paymentDetails.amount,
-      processedAt: new Date().toISOString()
+      verified: payment.status === 'completed',
+      message: payment.status === 'completed' 
+        ? 'Payment verified successfully'
+        : 'Payment verification failed'
     };
   }
 } 
