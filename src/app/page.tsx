@@ -475,7 +475,7 @@ export default function InfluencerFlowMVP() {
                       <div>
                         <h4 className="font-medium text-gray-900 mb-4">Workflow Execution</h4>
                         <div className="space-y-2">
-                          {result.workflow.map((step, stepIndex) => 
+                          {result.workflow.map((step: WorkflowStep, stepIndex: number) => 
                             renderWorkflowStep(step, stepIndex)
                           )}
                         </div>
