@@ -37,30 +37,48 @@ interface PerformanceReport {
 export class AnalyticsAgent extends Agent {
   constructor() {
     super(
+      'analytics_agent',
       'Performance Analytics Agent',
       'analytics_reporting',
-      ['ANALYZE_PERFORMANCE', 'GENERATE_REPORTS', 'TRACK_ROI'],
       BarChart3
     );
   }
 
-  async executeTask(task: Task) {
-    const { campaignId } = task.payload as { campaignId: string };
-    
-    // Fetch performance data from platforms
-    const youtubeData = await this.fetchYouTubeAnalytics(campaignId);
-    const instagramData = await this.fetchInstagramAnalytics(campaignId);
-    
-    // Generate comprehensive report
-    const report = this.generatePerformanceReport(youtubeData, instagramData);
-    
-    return {
-      campaignId,
-      report,
-      platforms: ['YouTube', 'Instagram'],
-      generatedAt: new Date().toISOString(),
-      message: 'Performance analysis completed'
-    };
+  canHandle(taskType: string): boolean {
+    return ['ANALYZE_PERFORMANCE', 'GENERATE_REPORTS', 'TRACK_ROI'].includes(taskType);
+  }
+
+  async processTask(task: Task): Promise<any> {
+    this.status = 'working';
+    this.currentTask = task;
+
+    try {
+      const { campaignId } = task.payload as { campaignId: string };
+      
+      // Fetch performance data from platforms
+      const youtubeData = await this.fetchYouTubeAnalytics(campaignId);
+      const instagramData = await this.fetchInstagramAnalytics(campaignId);
+      
+      // Generate comprehensive report
+      const report = this.generatePerformanceReport(youtubeData, instagramData);
+      
+      this.status = 'idle';
+      this.currentTask = null;
+      this.completedTasks++;
+      this.performance = Math.floor(Math.random() * 20 + 80);
+
+      return {
+        campaignId,
+        report,
+        platforms: ['YouTube', 'Instagram'],
+        generatedAt: new Date().toISOString(),
+        message: 'Performance analysis completed'
+      };
+    } catch (error) {
+      this.status = 'error';
+      this.currentTask = null;
+      throw error;
+    }
   }
 
   private async fetchYouTubeAnalytics(campaignId: string): Promise<YouTubeAnalytics> {
