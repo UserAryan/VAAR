@@ -27,12 +27,58 @@ export class CreatorDiscoveryAgent extends Agent {
 
   constructor() {
     super(
-      'Creator Discovery Agent', 
-      'creator_discovery', 
-      ['DISCOVER_CREATORS', 'SEARCH_INFLUENCERS', 'PROFILE_ANALYSIS'],
+      'creator_discovery_agent',
+      'Creator Discovery Agent',
+      'creator_discovery',
       Search
     );
     this.creatorDatabase = this.generateMockCreators();
+  }
+
+  canHandle(taskType: string): boolean {
+    return ['DISCOVER_CREATORS', 'SEARCH_INFLUENCERS', 'PROFILE_ANALYSIS'].includes(taskType);
+  }
+
+  async processTask(task: Task): Promise<any> {
+    this.status = 'working';
+    this.currentTask = task;
+
+    try {
+      const { criteria } = task.payload as { criteria: SearchCriteria };
+      
+      // Simulate API calls to YouTube and Instagram
+      await this.searchYouTubeCreators(criteria);
+      await this.searchInstagramCreators(criteria);
+      
+      // Filter creators based on criteria
+      let filtered = this.creatorDatabase.filter(creator => {
+        if (criteria.niche && creator.niche.toLowerCase() !== criteria.niche.toLowerCase()) return false;
+        if (criteria.minFollowers && creator.followers < criteria.minFollowers) return false;
+        if (criteria.maxBudget && creator.rate > criteria.maxBudget) return false;
+        if (criteria.platform && creator.platform !== criteria.platform) return false;
+        return true;
+      });
+
+      // Sort by relevance score
+      filtered = filtered.sort((a, b) => b.score - a.score).slice(0, 10);
+
+      this.status = 'idle';
+      this.currentTask = null;
+      this.completedTasks++;
+      this.performance = Math.floor(Math.random() * 20 + 80);
+
+      return {
+        creators: filtered,
+        totalFound: filtered.length,
+        searchCriteria: criteria,
+        platforms: ['YouTube', 'Instagram'],
+        message: `Found ${filtered.length} relevant creators matching your criteria`
+      };
+    } catch (error) {
+      this.status = 'error';
+      this.currentTask = null;
+      throw error;
+    }
   }
 
   private generateMockCreators(): Creator[] {
@@ -56,34 +102,6 @@ export class CreatorDiscoveryAgent extends Agent {
       });
     }
     return creators;
-  }
-
-  async executeTask(task: Task) {
-    const { criteria } = task.payload as { criteria: SearchCriteria };
-    
-    // Simulate API calls to YouTube and Instagram
-    await this.searchYouTubeCreators(criteria);
-    await this.searchInstagramCreators(criteria);
-    
-    // Filter creators based on criteria
-    let filtered = this.creatorDatabase.filter(creator => {
-      if (criteria.niche && creator.niche.toLowerCase() !== criteria.niche.toLowerCase()) return false;
-      if (criteria.minFollowers && creator.followers < criteria.minFollowers) return false;
-      if (criteria.maxBudget && creator.rate > criteria.maxBudget) return false;
-      if (criteria.platform && creator.platform !== criteria.platform) return false;
-      return true;
-    });
-
-    // Sort by relevance score
-    filtered = filtered.sort((a, b) => b.score - a.score).slice(0, 10);
-
-    return {
-      creators: filtered,
-      totalFound: filtered.length,
-      searchCriteria: criteria,
-      platforms: ['YouTube', 'Instagram'],
-      message: `Found ${filtered.length} relevant creators matching your criteria`
-    };
   }
 
   private async searchYouTubeCreators(criteria: SearchCriteria): Promise<void> {
