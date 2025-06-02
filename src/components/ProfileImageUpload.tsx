@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import { Camera } from 'lucide-react';
 import FileUpload from './FileUpload';
-import { STORAGE_BUCKETS } from '@/lib/supabase';
+import { BUCKETS, ALLOWED_FILE_TYPES } from '@/lib/supabase';
 
 interface ProfileImageUploadProps {
   userId: string;
   currentImageUrl?: string | null;
   onImageUpdate: (url: string) => void;
+  onError?: (error: Error) => void;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export default function ProfileImageUpload({
   userId,
   currentImageUrl,
   onImageUpdate,
+  onError,
   className = '',
 }: ProfileImageUploadProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -50,7 +52,8 @@ export default function ProfileImageUpload({
           bucket="PROFILE_IMAGES"
           path={`${userId}/profile`}
           onUploadComplete={onImageUpdate}
-          accept="image/jpeg,image/png,image/gif,image/webp"
+          onError={onError}
+          accept={[...ALLOWED_FILE_TYPES.IMAGE]}
           maxSize={5 * 1024 * 1024} // 5MB
           className="w-32 h-32 rounded-full"
         />
