@@ -1,4 +1,4 @@
-import { prisma } from './db'
+import db from './db'
 import { UserType, CampaignStatus, ContentType, ContentStatus } from '@prisma/client'
 
 // User Queries
@@ -9,7 +9,7 @@ export const userQueries = {
     name: string
     type: UserType
   }) => {
-    return await prisma.user.create({
+    return await db.user.create({
       data: {
         ...data,
         profile: {
@@ -26,7 +26,7 @@ export const userQueries = {
 
   // Get user with profile
   getUserWithProfile: async (userId: string) => {
-    return await prisma.user.findUnique({
+    return await db.user.findUnique({
       where: { id: userId },
       include: { profile: true }
     })
@@ -40,9 +40,20 @@ export const userQueries = {
     metrics?: any
     niches?: string[]
   }) => {
-    return await prisma.profile.update({
+    return await db.profile.update({
       where: { userId },
       data
+    })
+  },
+
+  getUserById: async (id: string) => {
+    return db.user.findUnique({
+      where: { id },
+      include: {
+        profile: true,
+        campaigns: true,
+        content: true,
+      },
     })
   }
 }
@@ -59,7 +70,7 @@ export const campaignQueries = {
     budget: number
     requirements: any
   }) => {
-    return await prisma.campaign.create({
+    return await db.campaign.create({
       data: {
         ...data,
         status: CampaignStatus.DRAFT
@@ -69,7 +80,7 @@ export const campaignQueries = {
 
   // Get campaign with content and analytics
   getCampaignDetails: async (campaignId: string) => {
-    return await prisma.campaign.findUnique({
+    return await db.campaign.findUnique({
       where: { id: campaignId },
       include: {
         content: true,
@@ -83,7 +94,7 @@ export const campaignQueries = {
 
   // Update campaign status
   updateCampaignStatus: async (campaignId: string, status: CampaignStatus) => {
-    return await prisma.campaign.update({
+    return await db.campaign.update({
       where: { id: campaignId },
       data: { status }
     })
@@ -101,7 +112,7 @@ export const contentQueries = {
     userId: string
     campaignId?: string
   }) => {
-    return await prisma.content.create({
+    return await db.content.create({
       data: {
         ...data,
         status: ContentStatus.DRAFT
@@ -111,7 +122,7 @@ export const contentQueries = {
 
   // Get content with analytics
   getContentWithAnalytics: async (contentId: string) => {
-    return await prisma.content.findUnique({
+    return await db.content.findUnique({
       where: { id: contentId },
       include: {
         analytics: true,
@@ -124,7 +135,7 @@ export const contentQueries = {
 
   // Update content status
   updateContentStatus: async (contentId: string, status: ContentStatus) => {
-    return await prisma.content.update({
+    return await db.content.update({
       where: { id: contentId },
       data: { status }
     })
@@ -141,14 +152,14 @@ export const analyticsQueries = {
     metrics: any
     date: Date
   }) => {
-    return await prisma.analytics.create({
+    return await db.analytics.create({
       data
     })
   },
 
   // Get user analytics
   getUserAnalytics: async (userId: string, startDate: Date, endDate: Date) => {
-    return await prisma.analytics.findMany({
+    return await db.analytics.findMany({
       where: {
         userId,
         date: {
@@ -172,14 +183,14 @@ export const notificationQueries = {
     type: 'CAMPAIGN_INVITE' | 'CONTENT_APPROVAL' | 'PAYMENT_RECEIVED' | 'SYSTEM_UPDATE'
     message: string
   }) => {
-    return await prisma.notification.create({
+    return await db.notification.create({
       data
     })
   },
 
   // Get user notifications
   getUserNotifications: async (userId: string) => {
-    return await prisma.notification.findMany({
+    return await db.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' }
     })
@@ -187,7 +198,7 @@ export const notificationQueries = {
 
   // Mark notification as read
   markNotificationAsRead: async (notificationId: string) => {
-    return await prisma.notification.update({
+    return await db.notification.update({
       where: { id: notificationId },
       data: { read: true }
     })
