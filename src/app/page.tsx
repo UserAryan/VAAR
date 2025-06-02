@@ -151,43 +151,23 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [supervisor]);
 
-  const handleCreateCampaign = async () => {
-    // Get form data from the CreateCampaignForm component
-    const form = document.querySelector('form');
-    if (!form) return;
-
-    const formData = new FormData(form);
-    const campaignName = formData.get('campaignName') as string;
-    const objective = formData.get('objective') as string;
-    const budget = formData.get('budget') as string;
-
-    if (!campaignName || !objective || !budget) {
-      alert('Please fill in required fields: Campaign Name, Objective, and Budget');
-      return;
-    }
-
+  const handleCreateCampaign = async (formData: CreateCampaignData) => {
     setIsRunning(true);
     try {
-      const campaignData: CreateCampaignData = {
-        campaignName,
-        objective,
-        budget: parseInt(budget),
-        startDate: formData.get('startDate') as string,
-        endDate: formData.get('endDate') as string,
-        platforms: (formData.get('platforms') as string).split(',').map(p => p.trim()),
-        targetAudience: formData.get('targetAudience') as string,
-        deliverables: formData.get('deliverables') as string,
-        notes: formData.get('notes') as string
-      };
-
-      const result = await supervisor.createCampaign(campaignData);
+      console.log('Starting campaign creation with data:', formData);
+      
+      // Call the supervisor agent
+      const result = await supervisor.createCampaign(formData);
+      console.log('Campaign creation result:', result);
+      
+      // Update the campaign results
       setCampaignResults(prev => [result, ...prev]);
       
-      // Reset form
-      form.reset();
-
       // Show success alert with login details
       alert("Campaign created! Please login to gmail using following details to simulate the test workflow:\n\nGmail id: vaarai25@gmail.com\nPass: Vaar_Ai2025");
+      
+      // Switch to results tab
+      setActiveTab('results');
     } catch (error) {
       console.error('Campaign creation failed:', error);
       alert('Campaign creation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));

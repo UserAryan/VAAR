@@ -19,12 +19,48 @@ export default function CreateCampaignForm({ onSubmit, isLoading }: CreateCampai
     notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      ...formData,
+    console.log('Form submitted with data:', JSON.stringify(formData, null, 2));
+    
+    // Validate required fields
+    if (!formData.campaignName || !formData.objective || !formData.budget) {
+      alert('Please fill in required fields: Campaign Name, Objective, and Budget');
+      return;
+    }
+
+    const campaignData: CreateCampaignData = {
+      campaignName: formData.campaignName,
+      objective: formData.objective,
       budget: parseInt(formData.budget),
-      platforms: formData.platforms.split(',').map(p => p.trim())
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      platforms: formData.platforms.split(',').map(p => p.trim()),
+      targetAudience: formData.targetAudience,
+      deliverables: formData.deliverables,
+      notes: formData.notes
+    };
+
+    console.log('Sending campaign data to parent:', JSON.stringify(campaignData, null, 2));
+    try {
+      await onSubmit(campaignData);
+      console.log('Form submission completed successfully');
+    } catch (error) {
+      console.error('Form submission failed:', error);
+      alert('Failed to create campaign: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+    
+    // Reset form after submission
+    setFormData({
+      campaignName: '',
+      objective: '',
+      budget: '',
+      startDate: '',
+      endDate: '',
+      platforms: '',
+      targetAudience: '',
+      deliverables: '',
+      notes: ''
     });
   };
 
@@ -187,10 +223,59 @@ export default function CreateCampaignForm({ onSubmit, isLoading }: CreateCampai
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4">
         <button
+          type="button"
+          onClick={async () => {
+            console.log("🚀 Go button clicked");
+            try {
+              const response = await fetch('/api/create-campaign', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  campaignName: formData.campaignName,
+                  objective: formData.objective,
+                  budget: parseInt(formData.budget),
+                  startDate: formData.startDate,
+                  endDate: formData.endDate,
+                  platforms: formData.platforms.split(',').map(p => p.trim()),
+                  targetAudience: formData.targetAudience,
+                  deliverables: formData.deliverables,
+                  notes: formData.notes
+                })
+              });
+              
+              console.log("📥 Go button response status:", response.status);
+              const result = await response.json();
+              console.log("📥 Go button response:", result);
+              
+              if (!response.ok) {
+                throw new Error(result.error || 'Failed to send to n8n');
+              }
+              
+              alert("Campaign created! Please login to gmail using following details to simulate the test workflow:\n\nGmail id: vaarai25@gmail.com\nPass: Vaar_Ai2025");
+            } catch (error) {
+              console.error("❌ Go button error:", error);
+              alert("Failed to send to n8n: " + (error instanceof Error ? error.message : 'Unknown error'));
+            }
+          }}
+          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          Go
+        </button>
+        {/* <button
           type="submit"
           disabled={isLoading}
+          onClick={(e) => {
+            console.log('Submit button clicked');
+            if (isLoading) {
+              e.preventDefault();
+              console.log('Button is disabled, preventing submission');
+              return;
+            }
+          }}
           className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
             isLoading
               ? 'bg-blue-400 cursor-not-allowed'
@@ -198,7 +283,7 @@ export default function CreateCampaignForm({ onSubmit, isLoading }: CreateCampai
           }`}
         >
           {isLoading ? 'Creating...' : 'Create Campaign'}
-        </button>
+        </button> */}
       </div>
     </form>
   );
