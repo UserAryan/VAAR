@@ -32,12 +32,13 @@ const mockCampaigns: Campaign[] = [
     id: '1',
     campaignName: 'Summer Collection Launch',
     objective: 'Brand Awareness',
-    budget: 5000,
+    budget: 50000,
     startDate: '2024-06-01',
     endDate: '2024-08-31',
     platforms: ['Instagram', 'YouTube'],
     targetAudience: 'Fashion enthusiasts, 18-35',
-    deliverables: '10 posts, 5 stories, 2 reels',
+    deliverables: '10 Instagram posts, 5 YouTube videos',
+    notes: 'Focus on sustainable fashion and eco-friendly materials',
     status: 'completed',
     createdAt: '2024-03-15T10:00:00Z',
     analytics: {
@@ -48,9 +49,9 @@ const mockCampaigns: Campaign[] = [
         reach: 50000,
         impressions: 75000,
         engagementRate: 4.2,
-        growthRate: 12.5,
-        conversionRate: 3.8,
-        roi: 2.5
+        growthRate: 15,
+        conversionRate: 2.8,
+        roi: 320
       },
       demographics: {
         ageGroups: {
@@ -60,73 +61,53 @@ const mockCampaigns: Campaign[] = [
           '45+': 5
         },
         gender: {
-          male: 40,
-          female: 60
+          'Female': 65,
+          'Male': 32,
+          'Other': 3
         },
         locations: {
-          'North America': 45,
-          'Europe': 30,
-          'Asia': 15,
-          'Other': 10
+          'Mumbai': 25,
+          'Delhi': 20,
+          'Bangalore': 18,
+          'Hyderabad': 12,
+          'Others': 25
         }
       },
-      timeline: Array.from({ length: 30 }, (_, i) => ({
-        date: new Date(2024, 5, i + 1).toISOString().split('T')[0],
-        engagement: Math.floor(Math.random() * 1000) + 500,
-        reach: Math.floor(Math.random() * 5000) + 2000,
-        conversions: Math.floor(Math.random() * 100) + 50
-      }))
+      timeline: [
+        {
+          date: '2024-06-01',
+          engagement: 5000,
+          reach: 15000,
+          conversions: 150
+        },
+        {
+          date: '2024-06-15',
+          engagement: 7500,
+          reach: 25000,
+          conversions: 225
+        },
+        {
+          date: '2024-07-01',
+          engagement: 10000,
+          reach: 35000,
+          conversions: 300
+        }
+      ]
     }
   },
   {
     id: '2',
     campaignName: 'Holiday Special',
     objective: 'Sales',
-    budget: 8000,
+    budget: 80000,
     startDate: '2024-11-15',
     endDate: '2024-12-31',
     platforms: ['Instagram', 'YouTube'],
     targetAudience: 'Shoppers, 25-45',
-    deliverables: '15 posts, 8 stories, 3 videos',
-    status: 'completed',
-    createdAt: '2024-03-14T15:30:00Z',
-    analytics: {
-      engagement: {
-        likes: 20000,
-        comments: 3500,
-        shares: 4500,
-        reach: 75000,
-        impressions: 100000,
-        engagementRate: 5.1,
-        growthRate: 15.2,
-        conversionRate: 4.5,
-        roi: 3.2
-      },
-      demographics: {
-        ageGroups: {
-          '18-24': 25,
-          '25-34': 50,
-          '35-44': 20,
-          '45+': 5
-        },
-        gender: {
-          male: 45,
-          female: 55
-        },
-        locations: {
-          'North America': 50,
-          'Europe': 25,
-          'Asia': 20,
-          'Other': 5
-        }
-      },
-      timeline: Array.from({ length: 30 }, (_, i) => ({
-        date: new Date(2024, 10, i + 15).toISOString().split('T')[0],
-        engagement: Math.floor(Math.random() * 1200) + 600,
-        reach: Math.floor(Math.random() * 6000) + 3000,
-        conversions: Math.floor(Math.random() * 150) + 75
-      }))
-    }
+    deliverables: '15 Instagram posts, 8 YouTube videos',
+    notes: 'Focus on holiday discounts and gift guides',
+    status: 'active',
+    createdAt: '2024-03-14T15:30:00Z'
   }
 ];
 
