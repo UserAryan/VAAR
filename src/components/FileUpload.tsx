@@ -2,14 +2,14 @@
 
 import React, { useState, useCallback } from 'react';
 import { Upload, X, Image as ImageIcon, FileText, Video } from 'lucide-react';
-import { uploadFile, STORAGE_BUCKETS } from '@/lib/supabase';
+import { uploadFile, BUCKETS, getPublicUrl } from '@/lib/supabase';
 
 interface FileUploadProps {
-  bucket: keyof typeof STORAGE_BUCKETS;
+  bucket: keyof typeof BUCKETS;
   path: string;
   onUploadComplete: (url: string) => void;
   onError?: (error: Error) => void;
-  accept?: string;
+  accept?: string[];
   maxSize?: number;
   className?: string;
 }
@@ -79,11 +79,27 @@ export default function FileUpload({
         setProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      const { url } = await uploadFile(bucket, file, path);
+      const result = await uploadFile(
+        BUCKETS[bucket],
+        path,
+        file,
+        {
+          allowedTypes: accept || [],
+          maxSize,
+          metadata: {
+            originalName: file.name,
+            contentType: file.type,
+          },
+        }
+      );
+
+      if (result) {
+        const publicUrl = getPublicUrl(BUCKETS[bucket], result.path);
+        onUploadComplete(publicUrl);
+      }
       
       clearInterval(progressInterval);
       setProgress(100);
-      onUploadComplete(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
       onError?.(err instanceof Error ? err : new Error('Upload failed'));
@@ -118,7 +134,7 @@ export default function FileUpload({
     >
       <input
         type="file"
-        accept={accept}
+        accept={accept?.join(',')}
         onChange={handleFileInput}
         className="hidden"
         id={`file-upload-${bucket}`}
