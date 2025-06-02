@@ -13,8 +13,13 @@ if (!process.env.OPENAI_API_KEY) {
   throw new Error('Missing OPENAI_API_KEY environment variable');
 }
 
+if (!process.env.PINECONE_ENVIRONMENT) {
+  throw new Error('PINECONE_ENVIRONMENT is not defined');
+}
+
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
+  environment: process.env.PINECONE_ENVIRONMENT,
 });
 
 const index = pinecone.index(process.env.PINECONE_INDEX_NAME);
@@ -102,4 +107,6 @@ export const createProfileEmbedding = async (profile: Profile): Promise<number[]
     Engagement Rate: ${profile.metrics.engagementRate}%
   `;
   return createEmbedding(text);
-}; 
+};
+
+export default pinecone; 
