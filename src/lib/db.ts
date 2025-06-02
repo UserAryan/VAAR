@@ -16,10 +16,10 @@ const globalForPrisma = globalThis as unknown as {
 const prismaClientSingleton = () => {
   return new PrismaClient({
     log: [
-      { emit: 'event', level: 'query' },
-      { emit: 'event', level: 'error' },
-      { emit: 'event', level: 'info' },
-      { emit: 'event', level: 'warn' },
+      { emit: 'stdout', level: 'query' },
+      { emit: 'stdout', level: 'error' },
+      { emit: 'stdout', level: 'info' },
+      { emit: 'stdout', level: 'warn' },
     ],
   });
 };
@@ -29,40 +29,6 @@ export const db = globalForPrisma.prisma ?? prismaClientSingleton();
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = db;
 }
-
-// Enhanced logging
-db.$on('query', (e: Prisma.QueryEvent) => {
-  console.log('Query:', {
-    query: e.query,
-    params: e.params,
-    duration: `${e.duration}ms`,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-db.$on('error', (e: Prisma.LogEvent) => {
-  console.error('Database error:', {
-    message: e.message,
-    target: e.target,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-db.$on('info', (e: Prisma.LogEvent) => {
-  console.info('Database info:', {
-    message: e.message,
-    target: e.target,
-    timestamp: new Date().toISOString(),
-  });
-});
-
-db.$on('warn', (e: Prisma.LogEvent) => {
-  console.warn('Database warning:', {
-    message: e.message,
-    target: e.target,
-    timestamp: new Date().toISOString(),
-  });
-});
 
 // Health check function
 export const checkDatabaseHealth = async () => {
